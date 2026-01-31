@@ -6,12 +6,16 @@
     "tasks": {
         "build": {
             "dependsOn": [
-                "^build"
+                "^build",
+                "^db:generate"
             ],
             "outputs": [
                 ".next/**",
                 "dist/**"
             ]
+        },
+        "db:generate": {
+            "cache": false
         },
         "lint": {
             "dependsOn": [
