@@ -45,10 +45,15 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 export const tenantProcedure = protectedProcedure.use(async ({ ctx, next }) => {
     const user = await ctx.prisma.user.findUnique({
         where: { clerkId: ctx.auth.userId },
+        include: { tenant: true }, // Needed to check deletedAt
     });
 
     if (!user) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not found in database' });
+    }
+
+    if (user.tenant.deletedAt) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Tenant has been deactivated' });
     }
 
     return next({
@@ -59,3 +64,32 @@ export const tenantProcedure = protectedProcedure.use(async ({ ctx, next }) => {
         },
     });
 });
+
+export const enforceRole = (role: 'OWNER' | 'ADMIN' | 'MEMBER') =>
+    tenantProcedure.use(async ({ ctx, next }) => {
+        if (!ctx.user) {
+            throw new TRPCError({ code: 'UNAUTHORIZED' });
+        }
+
+        const roles = ['OWNER', 'ADMIN', 'MEMBER'];
+        const userRoleIndex = roles.indexOf(ctx.user.role);
+        const requiredRoleIndex = roles.indexOf(role);
+
+        // RBAC Logic: OWNER < ADMIN < MEMBER (Indices: 0 < 1 < 2)
+        // Wait, usually Owner has ALL permissions.
+        // If required is ADMIN, Owner should pass. 
+        // So requiredRoleIndex >= userRoleIndex ? No.
+        // Let's explicitly define hierarchy.
+
+        const hierarchy: Record<string, number> = {
+            OWNER: 3,
+            ADMIN: 2,
+            MEMBER: 1,
+        };
+
+        if (hierarchy[ctx.user.role] < hierarchy[role]) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Insufficient permissions' });
+        }
+
+        return next();
+    });

@@ -15,7 +15,7 @@ export default function DashboardLayout({
             <SignedIn>
                 <div style={{ display: 'flex' }}>
                     <Sidebar />
-                    <main style={{ flex: 1, padding: '2rem', backgroundColor: '#fff', minHeight: '100vh' }}>
+                    <main style={{ flex: 1, padding: '2rem', backgroundColor: 'var(--background)', minHeight: '100vh', color: 'var(--foreground)' }}>
                         {children}
                     </main>
                 </div>

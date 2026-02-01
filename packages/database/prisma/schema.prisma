@@ -14,8 +14,10 @@ model Tenant {
   slug      String      @unique
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+  deletedAt DateTime?
   users     User[]
   tableData TableData[]
+  auditLogs AuditLog[]
 }
 
 model User {
@@ -26,9 +28,11 @@ model User {
   lastName  String?
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  auditLogs AuditLog[]
   role      Role     @default(MEMBER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
 }
 
 model TableData {
@@ -39,10 +43,28 @@ model TableData {
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
 }
 
 enum Role {
   OWNER
   ADMIN
   MEMBER
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // e.g. "CREATE", "UPDATE", "DELETE", "LOGIN"
+  entity    String   // e.g. "TableData", "User"
+  entityId  String   // ID of the affected record
+  userId    String   // Who did it
+  tenantId  String   // In which tenant
+  details   String?  // JSON string or description of changes
+  createdAt DateTime @default(now())
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([entityId])
 }

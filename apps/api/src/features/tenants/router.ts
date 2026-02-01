@@ -14,7 +14,13 @@ export const tenantsRouter = router({
     // Create organization (Onboarding)
     // This might be called if user has no tenant
     create: protectedProcedure
-        .input(z.object({ name: z.string().min(1), slug: z.string().min(1) }))
+        .input(z.object({
+            name: z.string().min(1),
+            slug: z.string().min(1),
+            email: z.string().email(),
+            firstName: z.string().optional(),
+            lastName: z.string().optional(),
+        }))
         .mutation(async ({ ctx, input }) => {
             // Check if slug taken
             const existing = await ctx.prisma.tenant.findUnique({
@@ -25,9 +31,6 @@ export const tenantsRouter = router({
             }
 
             // Create Tenant and User link
-            // We assume user might not exist in DB yet if this is first login
-            // But protectedProcedure checks auth.userId.
-
             // Transaction to ensure atomicity
             const newTenant = await ctx.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
                 const tenant = await tx.tenant.create({
@@ -37,24 +40,35 @@ export const tenantsRouter = router({
                     }
                 });
 
-                // Create or Update User
-                // We might need to handle the case where user already exists but has no tenant
-                // OR user is new.
-
                 await tx.user.upsert({
                     where: { clerkId: ctx.auth.userId! },
                     create: {
                         clerkId: ctx.auth.userId!,
-                        email: 'placeholder@example.com', // We don't have email in auth object reliably without extra calls or token claims. 
-                        // Ideally frontend passes email or we fetch from Clerk Backend API here.
-                        // For now, let's assume frontend passes email or we update it later.
-                        // Wait, requirement says "Parent app... signup".
-                        // We'll require more info in input?
+                        email: input.email,
+                        firstName: input.firstName,
+                        lastName: input.lastName,
                         tenantId: tenant.id,
                         role: 'OWNER',
                     },
                     update: {
                         tenantId: tenant.id, // Link to new tenant
+                        // Don't update email/names on simple link, or should we?
+                        // Let's assume we sync them if provided.
+                        email: input.email,
+                        firstName: input.firstName,
+                        lastName: input.lastName,
+                    }
+                });
+
+                // Audit Log for Creation
+                await tx.auditLog.create({
+                    data: {
+                        action: 'CREATE_TENANT',
+                        entity: 'Tenant',
+                        entityId: tenant.id,
+                        userId: (await tx.user.findUniqueOrThrow({ where: { clerkId: ctx.auth.userId! } })).id,
+                        tenantId: tenant.id,
+                        details: JSON.stringify({ name: tenant.name, slug: tenant.slug }),
                     }
                 });
 

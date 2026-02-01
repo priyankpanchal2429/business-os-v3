@@ -1,25 +1,37 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { pinoHttp } from 'pino-http';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
-// import { clerkMiddleware } from '@clerk/express'; // If available or custom
-// Actually @clerk/clerk-sdk-node doesn't export clerkMiddleware directly for express commonly used like this, 
-// usually we use `ClerkExpressWithAuth` or similar.
-// But we used `req.auth` in context, which requires middleware.
-// Let's use `ClerkExpressRequireAuth` or `ClerkExpressWithAuth`.
 import { ClerkExpressWithAuth } from '@clerk/clerk-sdk-node';
 
 import { env } from './env';
 import { appRouter } from './appRouter';
 import { createContext } from './context';
+import { logger } from './logger';
 
 const app = express();
+
+// Security Headers
+app.use(helmet());
+
+// Rate Limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+app.use(limiter);
+
+// Logging
+app.use(pinoHttp({ logger }));
 
 app.use(cors());
 app.use(express.json());
 
 // Clerk Middleware to populate req.auth
-// Note: We use loose auth (WithAuth) to allow public endpoints if needed, 
-// but mostly we rely on protectedProcedure to enforce it.
 app.use(ClerkExpressWithAuth());
 
 app.use(
@@ -35,5 +47,5 @@ app.get('/health', (req, res) => {
 });
 
 app.listen(env.PORT, () => {
-    console.log(`Server listening on port ${env.PORT}`);
+    logger.info(`Server listening on port ${env.PORT}`);
 });

@@ -4,26 +4,23 @@ import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
 import styles from './Sidebar.module.css';
 import { useEffect, useState } from 'react';
+import { ThemeManager, ThemeMode } from '../lib/ThemeClass';
 
 export function Sidebar() {
-    const [theme, setTheme] = useState('light');
+    const [theme, setTheme] = useState<ThemeMode>('system');
 
     useEffect(() => {
-        const stored = localStorage.getItem('theme');
-        if (stored) {
-            setTheme(stored);
-            document.documentElement.setAttribute('data-theme', stored);
-        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            setTheme('dark');
-            document.documentElement.setAttribute('data-theme', 'dark');
-        }
+        // Initialize theme
+        const manager = ThemeManager.getInstance();
+        setTheme(manager.getTheme());
+
+        // Optional: Listen for storage changes if you want multi-tab sync
     }, []);
 
     const toggleTheme = () => {
-        const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-        document.documentElement.setAttribute('data-theme', newTheme);
+        const manager = ThemeManager.getInstance();
+        manager.toggle();
+        setTheme(manager.getTheme()); // Update local state for UI icon
     };
 
     return (
