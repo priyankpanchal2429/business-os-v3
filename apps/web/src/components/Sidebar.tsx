@@ -27,7 +27,7 @@ export function Sidebar() {
         <aside className={styles.sidebar}>
             <div className={styles.logo}>BusinessOS</div>
             <nav className={styles.nav}>
-                <Link href="/" className={styles.link}>Dashboard</Link>
+                <Link href="/dashboard" className={styles.link}>Dashboard</Link>
                 <Link href="/table" className={styles.link}>Editable Table</Link>
                 <Link href="/blank" className={styles.link}>Blank Page</Link>
             </nav>
@@ -35,7 +35,7 @@ export function Sidebar() {
                 <div className={styles.themeToggle} onClick={toggleTheme}>
                     {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
                 </div>
-                <UserButton />
+                <UserButton showName />
             </div>
         </aside>
     );

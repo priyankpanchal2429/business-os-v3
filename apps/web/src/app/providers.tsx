@@ -13,7 +13,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         trpc.createClient({
             links: [
                 httpBatchLink({
-                    url: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/trpc',
+                    url: 'https://business-os-api.onrender.com/trpc',
                     transformer: superjson,
                     // You can pass headers here if needed, but Clerk handles auth token usually via headers or cookie?
                     // We need to pass the Clerk token.
@@ -26,12 +26,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
                     },
                 }),
             ],
-            transformer: superjson,
         })
     );
 
     return (
-        <ClerkProvider>
+        <ClerkProvider
+            signInFallbackRedirectUrl="/dashboard"
+            signUpFallbackRedirectUrl="/dashboard"
+            afterSignOutUrl="/"
+            signInUrl="/sign-in"
+            signUpUrl="/sign-up"
+        >
             <AuthenticatedTRPCProvider>
                 {children}
             </AuthenticatedTRPCProvider>
@@ -56,7 +61,6 @@ function AuthenticatedTRPCProvider({ children }: { children: React.ReactNode }) 
                     },
                 }),
             ],
-            transformer: superjson,
         })
     );
 
